@@ -6,7 +6,7 @@
 <!ENTITY launch "Settings/sound-driver">
 <!ENTITY gitURL "https://github.com/&author;/unraid-&name;/raw/master">
 <!ENTITY pluginURL "&gitURL;/&name;.plg">
-<!ENTITY md5 "bbc38a49609d4b2239a8ab0b1cdb2662">
+<!ENTITY md5 "22fad02435056461129a8c831703e6dc">
 <!ENTITY plugin "/boot/config/plugins/&name;">
 <!ENTITY emhttp "/usr/local/emhttp/plugins/&name;">
 ]>
@@ -115,7 +115,7 @@ if [ ! -f &plugin;/conf/asound.state ]; then
 else
   alsactl restore -f &plugin;/conf/asound.state 2>/dev/null
 fi
-echo -n "$(aplay -L | grep "CARD")" > /tmp/audio_outputs
+echo -n "$(aplay -L | grep "CARD")" > /tmp/sound_outputs
 }
 
 #Check if Sound Drivers are already downloaded and installed
