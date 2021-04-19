@@ -103,9 +103,10 @@ depmod -a 2>/dev/null
 sleep 1
 udevadm control --reload 2>/dev/null &amp;&amp; udevadm trigger 2>/dev/null
 sleep 3
-PRIMARY_AUDIO_DEV="$(cat &plugin;/settings.cfg | grep "primary_audio_device" | cut -d '=' -f2)"
-if [ "$PRIMARY_AUDIO_DEV" != "empty" ]; then
-  echo -n "pcm."\!"default $(cat &plugin;/settings.cfg | cut -d '=' -f2 | cut -d ':' -f1):$(cat &plugin;/settings.cfg | cut -d '=' -f3 | cut -d ',' -f1)"
+if [ "$(cat &plugin;/settings.cfg | grep "primary_audio_device" | cut -d '=' -f2)" != "empty" ]; then
+  echo -n "pcm."\!"default $(cat &plugin;/settings.cfg | cut -d '=' -f2 | cut -d ':' -f1):$(cat &plugin;/settings.cfg | cut -d '=' -f3 | cut -d ',' -f1)" > /etc/asound.conf
+else
+  echo -n "# ALSA system-wide config file" > /etc/asound.conf
 fi
 sleep 1
 if [ ! -f &plugin;/conf/asound.state ]; then
