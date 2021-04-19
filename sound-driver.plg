@@ -1,0 +1,156 @@
+<?xml version="1.0" standalone="yes"?>
+<!DOCTYPE PLUGIN [
+<!ENTITY name "sound-driver">
+<!ENTITY author "ich777">
+<!ENTITY version "2021.04.19">
+<!ENTITY launch "Settings/sound-driver">
+<!ENTITY gitURL "https://github.com/&author;/unraid-&name;/raw/master">
+<!ENTITY pluginURL "&gitURL;/&name;.plg">
+<!ENTITY md5 "bbc38a49609d4b2239a8ab0b1cdb2662">
+<!ENTITY plugin "/boot/config/plugins/&name;">
+<!ENTITY emhttp "/usr/local/emhttp/plugins/&name;">
+]>
+<PLUGIN name="&name;" author="&author;" version="&version;" launch="&launch;" pluginURL="&pluginURL;" min="6.9.2" support="https://forums.unraid.net/topic/92865-support-ich777-nvidiadvb-kernel-helperbuilder-docker/">
+  <CHANGES>
+
+###2021.04.19
+- Initial release
+
+</CHANGES>
+  <FILE Run="/bin/bash">
+    <INLINE>
+      rm -f $(ls /boot/config/plugins/&name;/&name;*.txz 2&gt;/dev/null|grep -v '&version;')
+    </INLINE>
+  </FILE>
+  <FILE Name="/boot/config/plugins/&name;/&name;-&version;.txz" Run="upgradepkg --install-new">
+    <URL>&gitURL;/packages/&name;-&version;.txz</URL>
+    <MD5>&md5;</MD5>
+  </FILE>
+  <FILE Name="&emhttp;/README.md">
+    <INLINE>
+**Sound Driver**
+
+This package contains the Sound Drivers (and also a custom ALSA build) that enables you to make use of your Soundcard in Unraid.
+</INLINE>
+  </FILE>
+  <FILE Run="/bin/bash">
+    <INLINE>
+
+KERNEL_V="$(uname -r)"
+PACKAGE="sound"
+DL_URL="https://github.com/ich777/unraid-plugins-repo/releases/download/$KERNEL_V"
+
+#Create settings file if not found
+if [ ! -f "&plugin;/settings.cfg" ]; then
+  echo 'primary_audio_device=empty' > "&plugin;/settings.cfg"
+fi
+
+#Wait for Network and timeout after 30 seconds
+HOST="8.8.8.8"
+for i in {1..10}; do
+  ping -c1 $HOST &amp;&gt; /dev/null &amp;&amp; break;
+done
+
+if [ ! -d "&plugin;/packages/${KERNEL_V%%-*}" ]; then
+  mkdir -p "&plugin;/packages/${KERNEL_V%%-*}"
+fi
+
+#Check for old packages
+rm -rf $(ls -d &plugin;/packages/* | grep -v "${KERNEL_V%%-*}")
+
+download() {
+#Download Sound Driver
+if wget -q -nc --show-progress --progress=bar:force:noscroll -O "&plugin;/packages/${KERNEL_V%%-*}/${PACKAGE}-1.txz" "${DL_URL}/${PACKAGE}-1.txz" ; then
+  if [ "$(md5sum "&plugin;/packages/${KERNEL_V%%-*}/${PACKAGE}-1.txz" | cut -d ' ' -f1)" != "$(wget -qO- "${DL_URL}/${PACKAGE}-1.txz.md5" | cut -d ' ' -f1)" ]; then
+    echo
+    echo "---CHECKSUM ERROR!---"
+    exit 1
+  fi
+  echo
+  echo "------------Sucessfully downloaded Sound Drivers, please wait...!------------"
+else
+  echo
+  echo "------------------------Can't download Sound Drivers-------------------------"
+  exit 1
+fi
+}
+
+check() {
+if [ ! -f "&plugin;/packages/${KERNEL_V%%-*}/${PACKAGE}-1.txz" ]; then
+  echo
+  echo "--------------------------Downloading Sound Drivers--------------------------"
+  echo "---------This could take some time, please don't close this window!----------"
+  download
+elif [ ! -s "&plugin;/packages/${KERNEL_V%%-*}/${PACKAGE}-1.txz" ]; then
+  rm -rf &plugin;/packages/${KERNEL_V%%-*}/${PACKAGE}-1.txz
+  echo
+  echo "----Download is empty please contact the developer of this plugin if the-----"
+  echo "----------plugin has been already built against that Kernel version----------"
+  exit 1
+else
+  echo
+  echo "-------------------------Sound Drivers found locally-------------------------"
+fi
+}
+
+install() {
+#Install Sound Drivers
+/sbin/installpkg "&plugin;/packages/${KERNEL_V%%-*}/${PACKAGE}-1.txz"
+if [ ! -d &plugin;/conf ]; then
+  mkdir -p &plugin;/conf
+fi
+depmod -a 2>/dev/null
+sleep 1
+udevadm control --reload 2>/dev/null &amp;&amp; udevadm trigger 2>/dev/null
+sleep 3
+PRIMARY_AUDIO_DEV="$(cat &plugin;/settings.cfg | grep "primary_audio_device" | cut -d '=' -f2)"
+if [ "$PRIMARY_AUDIO_DEV" != "empty" ]; then
+  echo -n "pcm."\!"default $(cat &plugin;/settings.cfg | cut -d '=' -f2 | cut -d ':' -f1):$(cat &plugin;/settings.cfg | cut -d '=' -f3 | cut -d ',' -f1)"
+fi
+sleep 1
+if [ ! -f &plugin;/conf/asound.state ]; then
+  alsactl init -f &plugin;/conf/asound.state 2>/dev/null
+  sleep 1
+  alsactl store -f &plugin;/conf/asound.state 2>/dev/null
+else
+  alsactl restore -f &plugin;/conf/asound.state 2>/dev/null
+fi
+echo -n "$(aplay -L | grep "CARD")" > /tmp/audio_outputs
+}
+
+#Check if Sound Drivers are already downloaded and installed
+check
+if [ ! -f /usr/sbin/alsactl ]; then
+  echo
+  echo "-------------------Installing Sound Drivers, please wait!--------------------"
+  install &gt; /dev/null
+  echo
+  echo "------------------Installation of Sound Drivers successful-------------------"
+  echo
+else
+  echo
+  echo "----------------------Sound Drivers already installed!-----------------------"
+  echo
+fi
+
+</INLINE>
+  </FILE>
+  <FILE Run="/bin/bash" Method="remove">
+    <INLINE>
+
+echo "--------------------------------"
+echo "---Uninstalling Sound Drivers---"
+echo "--------------------------------"
+# Remove plugin related files
+removepkg &name;-&version;
+rm -rf /usr/local/emhttp/plugins/&name;
+rm -rf &plugin;
+echo
+echo "------------------------------------------------------------------"
+echo "------Sound Drivers uninstalled, please reboot your server!-------"
+echo "------------------------------------------------------------------"
+echo
+
+</INLINE>
+  </FILE>
+</PLUGIN>
