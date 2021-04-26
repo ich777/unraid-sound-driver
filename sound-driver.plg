@@ -101,7 +101,7 @@ if [ ! -d &plugin;/conf ]; then
 fi
 depmod -a 2>/dev/null
 sleep 1
-udevadm control --reload 2>/dev/null &amp;&amp; udevadm trigger 2>/dev/null
+udevadm control --reload 2>/dev/null &amp;&amp; udevadm trigger --action=add 2>/dev/null
 sleep 3
 if [ "$(cat &plugin;/settings.cfg | grep "primary_audio_device" | cut -d '=' -f2)" != "empty" ]; then
   echo -n "pcm."\!"default $(cat &plugin;/settings.cfg | cut -d '=' -f2 | cut -d ':' -f1):$(cat &plugin;/settings.cfg | cut -d '=' -f3 | cut -d ',' -f1)" > /etc/asound.conf
